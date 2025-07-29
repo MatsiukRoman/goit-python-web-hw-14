@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>src.routes.contacts &#8212; Rest API 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nature.css?v=279e0f84" />
+    <script src="../../../_static/documentation_options.js?v=d45e8c67"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rest API 0.0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">src.routes.contacts</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for src.routes.contacts</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">APIRouter</span><span class="p">,</span> <span class="n">Depends</span><span class="p">,</span> <span class="n">HTTPException</span><span class="p">,</span> <span class="n">Query</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">Request</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">slowapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Limiter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">slowapi.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_remote_address</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">text</span><span class="p">,</span> <span class="n">extract</span><span class="p">,</span> <span class="n">or_</span><span class="p">,</span> <span class="n">and_</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">src.entity.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">User</span><span class="p">,</span> <span class="n">Contact</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">src.database.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_db</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">src.services.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">auth_service</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">src.schemas.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContactSchema</span><span class="p">,</span> <span class="n">ContactResponse</span><span class="p">,</span> <span class="n">UserModel</span>
+
+<span class="n">router</span> <span class="o">=</span> <span class="n">APIRouter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;/contacts&quot;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;contacts&quot;</span><span class="p">])</span>
+<span class="n">limiter</span> <span class="o">=</span> <span class="n">Limiter</span><span class="p">(</span><span class="n">key_func</span><span class="o">=</span><span class="n">get_remote_address</span><span class="p">)</span>
+
+<div class="viewcode-block" id="get_contacts">
+<a class="viewcode-back" href="../../../index.html#src.routes.contacts.get_contacts">[docs]</a>
+<span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="nb">list</span><span class="p">[</span><span class="n">ContactResponse</span><span class="p">])</span> <span class="c1"># Змінив /contacts на /</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_contacts</span><span class="p">(</span>
+    <span class="n">current_user</span><span class="p">:</span> <span class="n">User</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">auth_service</span><span class="o">.</span><span class="n">get_current_user</span><span class="p">),</span> 
+    <span class="n">first_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;First Name&quot;</span><span class="p">),</span>
+    <span class="n">last_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Last Name&quot;</span><span class="p">),</span>
+    <span class="n">email</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Email&quot;</span><span class="p">),</span>
+    <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">),</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves a list of contacts for the current user, with optional filtering.</span>
+
+<span class="sd">    This endpoint allows authenticated users to fetch their contacts,</span>
+<span class="sd">    optionally filtered by first name, last name, or email.</span>
+
+<span class="sd">    :param current_user: The authenticated user. Defaults to `auth_service.get_current_user`.</span>
+<span class="sd">    :type current_user: :class:`src.entity.models.User`</span>
+<span class="sd">    :param first_name: Optional filter for contact&#39;s first name (case-insensitive search).</span>
+<span class="sd">    :type first_name: str, optional</span>
+<span class="sd">    :param last_name: Optional filter for contact&#39;s last name (case-insensitive search).</span>
+<span class="sd">    :type last_name: str, optional</span>
+<span class="sd">    :param email: Optional filter for contact&#39;s email (case-insensitive search).</span>
+<span class="sd">    :type email: str, optional</span>
+<span class="sd">    :param db: The database session. Defaults to `get_db`.</span>
+<span class="sd">    :type db: :class:`sqlalchemy.orm.Session`</span>
+<span class="sd">    :return: A list of contacts matching the criteria.</span>
+<span class="sd">    :rtype: list[:class:`src.schemas.schemas.ContactResponse`]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Contact</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Contact</span><span class="o">.</span><span class="n">user_id</span> <span class="o">==</span> <span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">first_name</span><span class="p">:</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Contact</span><span class="o">.</span><span class="n">first_name</span><span class="o">.</span><span class="n">ilike</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;%</span><span class="si">{</span><span class="n">first_name</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">last_name</span><span class="p">:</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Contact</span><span class="o">.</span><span class="n">last_name</span><span class="o">.</span><span class="n">ilike</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;%</span><span class="si">{</span><span class="n">last_name</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">email</span><span class="p">:</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Contact</span><span class="o">.</span><span class="n">email</span><span class="o">.</span><span class="n">ilike</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;%</span><span class="si">{</span><span class="n">email</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">))</span>
+
+    <span class="n">contacts</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">contacts</span></div>
+
+
+<div class="viewcode-block" id="get_contact_by_id">
+<a class="viewcode-back" href="../../../index.html#src.routes.contacts.get_contact_by_id">[docs]</a>
+<span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{contact_id}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ContactResponse</span><span class="p">)</span> <span class="c1"># Змінив /contacts/{contact_id} на /{contact_id}</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_contact_by_id</span><span class="p">(</span>
+    <span class="n">contact_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">current_user</span><span class="p">:</span> <span class="n">User</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">auth_service</span><span class="o">.</span><span class="n">get_current_user</span><span class="p">),</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">)</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves a single contact by its ID for the current user.</span>
+
+<span class="sd">    :param contact_id: The unique identifier of the contact. Must be a positive integer.</span>
+<span class="sd">    :type contact_id: int</span>
+<span class="sd">    :param current_user: The authenticated user. Defaults to `auth_service.get_current_user`.</span>
+<span class="sd">    :type current_user: :class:`src.entity.models.User`</span>
+<span class="sd">    :param db: The database session. Defaults to `get_db`.</span>
+<span class="sd">    :type db: :class:`sqlalchemy.orm.Session`</span>
+<span class="sd">    :raises HTTPException: 404 Not Found if the contact does not exist or does not belong to the current user.</span>
+<span class="sd">    :return: The found contact.</span>
+<span class="sd">    :rtype: :class:`src.schemas.schemas.ContactResponse`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">contact</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Contact</span><span class="p">)</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">contact_id</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">contact</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_404_NOT_FOUND</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;NOT FOUND&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">contact</span></div>
+
+
+<div class="viewcode-block" id="create_contact">
+<a class="viewcode-back" href="../../../index.html#src.routes.contacts.create_contact">[docs]</a>
+<span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ContactResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_201_CREATED</span><span class="p">)</span> <span class="c1"># Змінив /contacts на /, додав status_code</span>
+<span class="nd">@limiter</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="s2">&quot;3/minute&quot;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_contact</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">body</span><span class="p">:</span> <span class="n">ContactSchema</span><span class="p">,</span> <span class="n">current_user</span><span class="p">:</span> <span class="n">User</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">auth_service</span><span class="o">.</span><span class="n">get_current_user</span><span class="p">),</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates a new contact for the current user.</span>
+
+<span class="sd">    This endpoint adds a new contact to the database. It is rate-limited to 3 requests per minute.</span>
+
+<span class="sd">    :param request: The incoming request object for rate limiting.</span>
+<span class="sd">    :type request: :class:`fastapi.Request`</span>
+<span class="sd">    :param body: The contact data to be created.</span>
+<span class="sd">    :type body: :class:`src.schemas.schemas.ContactSchema`</span>
+<span class="sd">    :param current_user: The authenticated user. Defaults to `auth_service.get_current_user`.</span>
+<span class="sd">    :type current_user: :class:`src.entity.models.User`</span>
+<span class="sd">    :param db: The database session. Defaults to `get_db`.</span>
+<span class="sd">    :type db: :class:`sqlalchemy.orm.Session`</span>
+<span class="sd">    :raises HTTPException: 409 Conflict if a contact with the same email already exists for the user.</span>
+<span class="sd">    :return: The newly created contact.</span>
+<span class="sd">    :rtype: :class:`src.schemas.schemas.ContactResponse`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">contact</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Contact</span><span class="p">)</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="n">body</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span> <span class="c1"># Додав user_id до фільтрації</span>
+    <span class="k">if</span> <span class="n">contact</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span>
+            <span class="n">status_code</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_409_CONFLICT</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Contact with this email already exists for this user!&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">contact</span> <span class="o">=</span> <span class="n">Contact</span><span class="p">(</span><span class="o">**</span><span class="n">body</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(),</span><span class="n">user_id</span><span class="o">=</span><span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> 
+    <span class="n">db</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">contact</span><span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">refresh</span><span class="p">(</span><span class="n">contact</span><span class="p">)</span> <span class="c1"># Додаємо refresh для отримання повних даних, включаючи id</span>
+    <span class="k">return</span> <span class="n">contact</span></div>
+
+
+<div class="viewcode-block" id="update_contact">
+<a class="viewcode-back" href="../../../index.html#src.routes.contacts.update_contact">[docs]</a>
+<span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{contact_id}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ContactResponse</span><span class="p">)</span> <span class="c1"># Змінив /contacts/{contact_id} на /{contact_id}</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">update_contact</span><span class="p">(</span>
+    <span class="n">body</span><span class="p">:</span> <span class="n">ContactSchema</span><span class="p">,</span> <span class="n">contact_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">current_user</span><span class="p">:</span> <span class="n">User</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">auth_service</span><span class="o">.</span><span class="n">get_current_user</span><span class="p">),</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">)</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Updates an existing contact for the current user.</span>
+
+<span class="sd">    :param body: The updated contact data.</span>
+<span class="sd">    :type body: :class:`src.schemas.schemas.ContactSchema`</span>
+<span class="sd">    :param contact_id: The unique identifier of the contact to update. Must be a positive integer.</span>
+<span class="sd">    :type contact_id: int</span>
+<span class="sd">    :param current_user: The authenticated user. Defaults to `auth_service.get_current_user`.</span>
+<span class="sd">    :type current_user: :class:`src.entity.models.User`</span>
+<span class="sd">    :param db: The database session. Defaults to `get_db`.</span>
+<span class="sd">    :type db: :class:`sqlalchemy.orm.Session`</span>
+<span class="sd">    :raises HTTPException: 404 Not Found if the contact does not exist or does not belong to the current user.</span>
+<span class="sd">    :return: The updated contact.</span>
+<span class="sd">    :rtype: :class:`src.schemas.schemas.ContactResponse`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">contact</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Contact</span><span class="p">)</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">contact_id</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">contact</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_404_NOT_FOUND</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Contact not found&quot;</span><span class="p">)</span>
+
+    <span class="n">contact</span><span class="o">.</span><span class="n">first_name</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">first_name</span>
+    <span class="n">contact</span><span class="o">.</span><span class="n">last_name</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">last_name</span>
+    <span class="n">contact</span><span class="o">.</span><span class="n">email</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">email</span>
+    <span class="n">contact</span><span class="o">.</span><span class="n">phone_number</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">phone_number</span>
+    <span class="n">contact</span><span class="o">.</span><span class="n">birthday</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">birthday</span>
+    <span class="n">contact</span><span class="o">.</span><span class="n">additional_info</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">additional_info</span>
+
+    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">refresh</span><span class="p">(</span><span class="n">contact</span><span class="p">)</span> <span class="c1"># Додаємо refresh для отримання оновлених даних</span>
+    <span class="k">return</span> <span class="n">contact</span></div>
+
+
+
+<div class="viewcode-block" id="delete_contact">
+<a class="viewcode-back" href="../../../index.html#src.routes.contacts.delete_contact">[docs]</a>
+<span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{contact_id}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ContactResponse</span><span class="p">)</span> <span class="c1"># Змінив /contacts/{contact_id} на /{contact_id}</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_contact</span><span class="p">(</span><span class="n">contact_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">current_user</span><span class="p">:</span> <span class="n">User</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">auth_service</span><span class="o">.</span><span class="n">get_current_user</span><span class="p">),</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Deletes a contact for the current user.</span>
+
+<span class="sd">    :param contact_id: The unique identifier of the contact to delete. Must be a positive integer.</span>
+<span class="sd">    :type contact_id: int</span>
+<span class="sd">    :param current_user: The authenticated user. Defaults to `auth_service.get_current_user`.</span>
+<span class="sd">    :type current_user: :class:`src.entity.models.User`</span>
+<span class="sd">    :param db: The database session. Defaults to `get_db`.</span>
+<span class="sd">    :type db: :class:`sqlalchemy.orm.Session`</span>
+<span class="sd">    :raises HTTPException: 404 Not Found if the contact does not exist or does not belong to the current user.</span>
+<span class="sd">    :return: The deleted contact.</span>
+<span class="sd">    :rtype: :class:`src.schemas.schemas.ContactResponse`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">contact</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Contact</span><span class="p">)</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">contact_id</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    
+    <span class="k">if</span> <span class="n">contact</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_404_NOT_FOUND</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;NOT FOUND&quot;</span><span class="p">)</span>
+
+    <span class="n">db</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">contact</span><span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">contact</span></div>
+
+
+<div class="viewcode-block" id="get_upcoming_birthdays">
+<a class="viewcode-back" href="../../../index.html#src.routes.contacts.get_upcoming_birthdays">[docs]</a>
+<span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/upcoming-birthdays/&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">List</span><span class="p">[</span><span class="n">ContactResponse</span><span class="p">])</span> <span class="c1"># Змінив /contacts/upcoming-birthdays/ на /upcoming-birthdays/</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_upcoming_birthdays</span><span class="p">(</span><span class="n">current_user</span><span class="p">:</span> <span class="n">User</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">auth_service</span><span class="o">.</span><span class="n">get_current_user</span><span class="p">),</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves contacts with upcoming birthdays within the next 7 days for the current user.</span>
+
+<span class="sd">    This endpoint identifies contacts whose birthdays fall within the next week,</span>
+<span class="sd">    considering year-end transitions (December to January).</span>
+
+<span class="sd">    :param current_user: The authenticated user. Defaults to `auth_service.get_current_user`.</span>
+<span class="sd">    :type current_user: :class:`src.entity.models.User`</span>
+<span class="sd">    :param db: The database session. Defaults to `get_db`.</span>
+<span class="sd">    :type db: :class:`sqlalchemy.orm.Session`</span>
+<span class="sd">    :return: A list of contacts with upcoming birthdays.</span>
+<span class="sd">    :rtype: list[:class:`src.schemas.schemas.ContactResponse`]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">today</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+    <span class="n">end_date</span> <span class="o">=</span> <span class="n">today</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+
+    <span class="c1"># Base query for the current user&#39;s contacts</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Contact</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Contact</span><span class="o">.</span><span class="n">user_id</span> <span class="o">==</span> <span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+    <span class="c1"># Logic to handle year-end (December to January) birthday ranges</span>
+    <span class="k">if</span> <span class="n">today</span><span class="o">.</span><span class="n">month</span> <span class="o">==</span> <span class="mi">12</span> <span class="ow">and</span> <span class="n">end_date</span><span class="o">.</span><span class="n">month</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># Birthdays from today to end of December, PLUS birthdays from start of January to end_date</span>
+        <span class="n">contacts</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+            <span class="n">or_</span><span class="p">(</span>
+                <span class="n">and_</span><span class="p">(</span>
+                    <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;month&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">==</span> <span class="n">today</span><span class="o">.</span><span class="n">month</span><span class="p">,</span>
+                    <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;day&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">today</span><span class="o">.</span><span class="n">day</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="n">and_</span><span class="p">(</span>
+                    <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;month&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">==</span> <span class="n">end_date</span><span class="o">.</span><span class="n">month</span><span class="p">,</span>
+                    <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;day&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">end_date</span><span class="o">.</span><span class="n">day</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Birthdays within the same year&#39;s month range</span>
+        <span class="n">contacts</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+            <span class="n">and_</span><span class="p">(</span>
+                <span class="n">or_</span><span class="p">(</span>
+                    <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;month&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">==</span> <span class="n">today</span><span class="o">.</span><span class="n">month</span><span class="p">,</span>
+                    <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;month&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">==</span> <span class="n">end_date</span><span class="o">.</span><span class="n">month</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="c1"># If month is current, day must be &gt;= today.day</span>
+                <span class="c1"># If month is end_date_month, day must be &lt;= end_date.day</span>
+                <span class="n">or_</span><span class="p">(</span>
+                    <span class="n">and_</span><span class="p">(</span>
+                        <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;month&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">==</span> <span class="n">today</span><span class="o">.</span><span class="n">month</span><span class="p">,</span>
+                        <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;day&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">today</span><span class="o">.</span><span class="n">day</span><span class="p">,</span>
+                    <span class="p">),</span>
+                    <span class="n">and_</span><span class="p">(</span>
+                        <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;month&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">==</span> <span class="n">end_date</span><span class="o">.</span><span class="n">month</span><span class="p">,</span>
+                        <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;day&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">end_date</span><span class="o">.</span><span class="n">day</span><span class="p">,</span>
+                    <span class="p">),</span>
+                    <span class="c1"># This handles cases where the range spans across full months</span>
+                    <span class="c1"># e.g., from day 20 of month X to day 10 of month Y (where X &lt; Y)</span>
+                    <span class="c1"># and there&#39;s a full month Z in between (X &lt; Z &lt; Y)</span>
+                    <span class="n">and_</span><span class="p">(</span>
+                        <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;month&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">today</span><span class="o">.</span><span class="n">month</span><span class="p">,</span>
+                        <span class="n">extract</span><span class="p">(</span><span class="s2">&quot;month&quot;</span><span class="p">,</span> <span class="n">Contact</span><span class="o">.</span><span class="n">birthday</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">end_date</span><span class="o">.</span><span class="n">month</span><span class="p">,</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">contacts</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rest API 0.0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">src.routes.contacts</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2025, Roman Matsiuk.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>src.conf.config &#8212; Rest API 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nature.css?v=279e0f84" />
+    <script src="../../../_static/documentation_options.js?v=d45e8c67"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rest API 0.0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">src.conf.config</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for src.conf.config</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">lru_cache</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">field_validator</span><span class="p">,</span> <span class="n">EmailStr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic_settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSettings</span>
+
+<div class="viewcode-block" id="Settings">
+<a class="viewcode-back" href="../../../index.html#src.conf.config.Settings">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Settings</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Configuration settings for the application.</span>
+
+<span class="sd">    This class loads environment variables from a .env file and provides them</span>
+<span class="sd">    as easily accessible attributes. It includes settings for the database,</span>
+<span class="sd">    email service, JWT authentication, and Cloudinary integration.</span>
+
+<span class="sd">    :ivar SQLALCHEMY_DATABASE_URL: Database connection URL.</span>
+<span class="sd">    :vartype SQLALCHEMY_DATABASE_URL: str</span>
+<span class="sd">    :ivar MAIL_USERNAME: Username for the email service.</span>
+<span class="sd">    :vartype MAIL_USERNAME: EmailStr</span>
+<span class="sd">    :ivar MAIL_PASSWORD: Password for the email service.</span>
+<span class="sd">    :vartype MAIL_PASSWORD: str</span>
+<span class="sd">    :ivar MAIL_FROM: Sender email address.</span>
+<span class="sd">    :vartype MAIL_FROM: EmailStr</span>
+<span class="sd">    :ivar MAIL_PORT: Port for the email server.</span>
+<span class="sd">    :vartype MAIL_PORT: int</span>
+<span class="sd">    :ivar MAIL_SERVER: Hostname or IP of the email server.</span>
+<span class="sd">    :vartype MAIL_SERVER: str</span>
+<span class="sd">    :ivar MAIL_FROM_NAME: Display name for the sender email.</span>
+<span class="sd">    :vartype MAIL_FROM_NAME: str</span>
+<span class="sd">    :ivar MAIL_STARTTLS: Enable STARTTLS for email communication.</span>
+<span class="sd">    :vartype MAIL_STARTTLS: bool</span>
+<span class="sd">    :ivar MAIL_SSL_TLS: Enable SSL/TLS for email communication.</span>
+<span class="sd">    :vartype MAIL_SSL_TLS: bool</span>
+<span class="sd">    :ivar USE_CREDENTIALS: Use authentication credentials for email.</span>
+<span class="sd">    :vartype USE_CREDENTIALS: bool</span>
+<span class="sd">    :ivar VALIDATE_CERTS: Validate SSL/TLS certificates for email.</span>
+<span class="sd">    :vartype VALIDATE_CERTS: bool</span>
+<span class="sd">    :ivar SECRET_KEY: Secret key for JWT token signing.</span>
+<span class="sd">    :vartype SECRET_KEY: str</span>
+<span class="sd">    :ivar ALGORITHM: Algorithm used for JWT token signing (e.g., &quot;HS256&quot;).</span>
+<span class="sd">    :vartype ALGORITHM: str</span>
+<span class="sd">    :ivar CLOUDINARY_NAME: Cloudinary cloud name.</span>
+<span class="sd">    :vartype CLOUDINARY_NAME: str</span>
+<span class="sd">    :ivar CLOUDINARY_API_KEY: Cloudinary API key.</span>
+<span class="sd">    :vartype CLOUDINARY_API_KEY: str</span>
+<span class="sd">    :ivar CLOUDINARY_API_SECRET: Cloudinary API secret.</span>
+<span class="sd">    :vartype CLOUDINARY_API_SECRET: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">SQLALCHEMY_DATABASE_URL</span><span class="p">:</span> <span class="nb">str</span>
+    
+    <span class="n">MAIL_USERNAME</span><span class="p">:</span> <span class="n">EmailStr</span>
+    <span class="n">MAIL_PASSWORD</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">MAIL_FROM</span><span class="p">:</span> <span class="n">EmailStr</span>
+    <span class="n">MAIL_PORT</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">MAIL_SERVER</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">MAIL_FROM_NAME</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">MAIL_STARTTLS</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">MAIL_SSL_TLS</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">USE_CREDENTIALS</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">VALIDATE_CERTS</span><span class="p">:</span> <span class="nb">bool</span>
+
+    <span class="n">SECRET_KEY</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">ALGORITHM</span><span class="p">:</span> <span class="nb">str</span>
+
+    <span class="n">CLOUDINARY_NAME</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">CLOUDINARY_API_KEY</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">CLOUDINARY_API_SECRET</span><span class="p">:</span> <span class="nb">str</span>
+
+<div class="viewcode-block" id="Settings.validate_algorithm">
+<a class="viewcode-back" href="../../../index.html#src.conf.config.Settings.validate_algorithm">[docs]</a>
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;ALGORITHM&quot;</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate_algorithm</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validates that the ALGORITHM is either &quot;HS256&quot; or &quot;HS512&quot;.</span>
+
+<span class="sd">        :param v: The value of the ALGORITHM field.</span>
+<span class="sd">        :type v: Any</span>
+<span class="sd">        :raises ValueError: If the algorithm is not &quot;HS256&quot; or &quot;HS512&quot;.</span>
+<span class="sd">        :return: The validated algorithm value.</span>
+<span class="sd">        :rtype: Any</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;HS256&quot;</span><span class="p">,</span> <span class="s2">&quot;HS512&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;algorithm must be HS256 or HS512&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span></div>
+
+
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">env_file</span><span class="o">=</span><span class="s2">&quot;.env&quot;</span><span class="p">,</span> <span class="n">env_file_encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_settings">
+<a class="viewcode-back" href="../../../index.html#src.conf.config.get_settings">[docs]</a>
+<span class="nd">@lru_cache</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_settings</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Settings</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves the application settings.</span>
+
+<span class="sd">    This function is cached to ensure that settings are loaded only once.</span>
+
+<span class="sd">    :return: An instance of the Settings class.</span>
+<span class="sd">    :rtype: Settings</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Settings</span><span class="p">()</span></div>
+
+<span class="c1">#settings = Settings()</span>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rest API 0.0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">src.conf.config</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2025, Roman Matsiuk.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    </div>
+  </body>
+</html>
